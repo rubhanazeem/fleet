@@ -5737,6 +5737,10 @@ spec:
                         in the helm history.
                       type: boolean
                   type: object
+                deleteNamespaces:
+                  description: DeleteNamespaces specifies if the namespaces created
+                    must be deleted after deleting the GitRepo.
+                  type: boolean
                 disablePolling:
                   description: Disables git polling. When enabled only webhooks will
                     be used.

@@ -18,6 +18,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	errutil "k8s.io/apimachinery/pkg/util/errors"
@@ -54,10 +55,12 @@ func (r *GitRepoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	deleteNamespaces := gitrepo.Spec.DeleteNamespaces
+	logger.Info("-----------", "deleteNamespaces", deleteNamespaces)
 	// Clean up
 	if apierrors.IsNotFound(err) {
 		logger.V(1).Info("Gitrepo deleted, deleting bundle, image scans")
-		if err := purgeBundles(ctx, r.Client, req.NamespacedName); err != nil {
+		if err := purgeBundles(ctx, r.Client, req.NamespacedName, deleteNamespaces); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -66,6 +69,18 @@ func (r *GitRepoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		if err := purgeImageScans(ctx, r.Client, req.NamespacedName); err != nil {
 			return ctrl.Result{}, err
+		}
+
+		if gitrepo.Spec.DeleteNamespaces && gitrepo.Spec.TargetNamespace != "" {
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: gitrepo.Spec.TargetNamespace,
+				},
+			}
+			err := r.Client.Delete(ctx, namespace)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 		return ctrl.Result{}, nil
 	}
@@ -257,14 +272,21 @@ func bundleStatusChangedPredicate() predicate.Funcs {
 	}
 }
 
-func purgeBundles(ctx context.Context, c client.Client, gitrepo types.NamespacedName) error {
+func purgeBundles(ctx context.Context, c client.Client, gitrepo types.NamespacedName, deleteNamespaces bool) error {
+	logger := log.FromContext(ctx).WithName("purgebundles")
+	logger.Info("::::::::::::::::::::::::::::::::::")
 	bundles := &fleet.BundleList{}
 	err := c.List(ctx, bundles, client.MatchingLabels{fleet.RepoLabel: gitrepo.Name}, client.InNamespace(gitrepo.Namespace))
+	namespaces := []string{}
 	if err != nil {
 		return err
 	}
 
 	for _, bundle := range bundles.Items {
+		// only iterate when deletenamespaces
+		for _, resourceKey := range bundle.Status.ResourceKey {
+			namespaces = append(namespaces, resourceKey.Namespace)
+		}
 		err := c.Delete(ctx, &bundle) // nolint:gosec // does not store pointer
 		if err != nil {
 			return err
