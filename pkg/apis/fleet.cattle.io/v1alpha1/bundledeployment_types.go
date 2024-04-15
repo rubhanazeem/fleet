@@ -62,7 +62,7 @@ type BundleDeploymentOptions struct {
 	// namespace and if any cluster scoped resource exists the deployment
 	// will fail.
 	// +nullable
-	TargetNamespace string `json:"namespace,omitempty"`
+	TargetNamespace string `json:"namespace,omitempty"` // Check this option
 
 	// Kustomize options for the deployment, like the dir containing the
 	// kustomization.yaml file.

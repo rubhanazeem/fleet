@@ -329,3 +329,5 @@ func readMetadata(bytes []byte) (*bundleMeta, error) {
 	temp := &bundleMeta{}
 	return temp, yaml.Unmarshal(bytes, temp)
 }
+
+// bundledeploymentoptions targetNamespace

@@ -66,7 +66,7 @@ type GitRepoSpec struct {
 	// Any cluster scoped resource will be rejected if this is set
 	// Additionally this namespace will be created on demand.
 	// +nullable
-	TargetNamespace string `json:"targetNamespace,omitempty"`
+	TargetNamespace string `json:"targetNamespace,omitempty"` //Delete it too
 
 	// ClientSecretName is the name of the client secret to be used to connect to the repo
 	// It is expected the secret be of type "kubernetes.io/basic-auth" or "kubernetes.io/ssh-auth".
